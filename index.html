@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전투력 길드 팀 메이커 PRO</title>
+    <!-- STREAMING_CHUNK:Loading Tailwind CSS and fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { base: '#0b0f19', card: '#111827', border: '#1f2937', hover: '#1e293b' },
+                        neon: { purple: '#8b5cf6', blue: '#3b82f6', pink: '#ec4899', gold: '#fbbf24' }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* STREAMING_CHUNK:Styling custom scrollbar, glassmorphism and animations */
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+
+        .glass {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .drag-over {
+            border: 2px dashed #8b5cf6 !important;
+            background-color: rgba(139, 92, 246, 0.1) !important;
+        }
+
+        .dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
+        .toast-enter {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        .toast-exit {
+            animation: fadeOut 0.3s ease-in forwards;
+        }
+    </style>
+</head>
+
+<body class="antialiased min-h-screen flex flex-col selection:bg-neon-purple selection:text-white pb-12">
+
+    <!-- STREAMING_CHUNK:Rendering header section -->
+    <header class="glass sticky top-0 z-30 shadow-[0_4px_30px_rgba(0,0,0,0.5)] border-b border-gray-800 py-3">
+        <div class="max-w-[1400px] mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 bg-gradient-to-br from-neon-purple to-neon-blue rounded-xl flex items-center justify-center text-xl shadow-[0_0_15px_rgba(139,92,246,0.4)]">
+                    ⚔️
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight text-white">
+                        전투력 길드 팀 메이커 <span
+                            class="text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-neon-blue">PRO</span>
+                    </h1>
+                    <div class="flex items-center gap-2">
+                        <p class="text-gray-400 text-[10px] uppercase tracking-widest font-bold">제작자 : 발리</p>
+                        <span id="syncBadge"
+                            class="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.2 rounded border border-yellow-500/30">☁️
+                            동기화 중...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="shareLink()"
+                    class="glass hover:bg-gray-800 text-gray-300 text-xs font-bold py-2 px-4 rounded-lg transition-all flex items-center gap-1.5 border border-gray-700 hover:border-neon-purple">
+                    🔗 링크 공유하기
+                </button>
+                <button onclick="saveStateLocally()"
+                    class="glass hover:bg-gray-800 text-gray-300 text-xs font-bold py-2 px-4 rounded-lg transition-all flex items-center gap-1.5 border border-gray-700 hover:border-neon-blue">
+                    💾 로컬 저장
+                </button>
+                <button onclick="loadStateLocally()"
+                    class="glass hover:bg-gray-800 text-gray-300 text-xs font-bold py-2 px-4 rounded-lg transition-all flex items-center gap-1.5 border border-gray-700 hover:border-neon-blue">
+                    📂 불러오기
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- STREAMING_CHUNK:Setting up main layout grid -->
+    <main class="flex-grow max-w-[1400px] w-full mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <div class="lg:col-span-3 flex flex-col gap-4">
+            <!-- 일괄 추가 -->
+            <div class="bg-dark-card rounded-xl border border-gray-800 p-4 shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gray-500 to-gray-400"></div>
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-sm font-bold text-white flex items-center gap-2">📝 명단 일괄 추가</h2>
+                    <select id="bulkTier"
+                        class="bg-[#0b0f19] border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:border-neon-purple focus:outline-none cursor-pointer">
+                        <option value="1">1 티어</option>
+                        <option value="2">2 티어</option>
+                        <option value="3" selected>3 티어</option>
+                        <option value="4">4 티어</option>
+                        <option value="5">5 티어</option>
+                    </select>
+                </div>
+                <textarea id="bulkInput" rows="3"
+                    class="w-full bg-[#0b0f19] border border-gray-700 rounded-lg p-2 text-sm text-gray-300 focus:border-neon-purple focus:outline-none transition-colors"
+                    placeholder="가렌, 다리우스, 티모&#10;(쉼표/띄어쓰기 구분)"></textarea>
+                <button onclick="addBulkPlayers()"
+                    class="w-full mt-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold py-2 rounded-lg transition-all border border-gray-700">
+                    지정한 티어로 일괄 등록
+                </button>
+            </div>
+
+            <!-- 개별 추가 및 목록 -->
+            <div
+                class="bg-dark-card rounded-xl border border-gray-800 p-4 shadow-lg flex-grow flex flex-col h-[500px] relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-purple to-neon-pink"></div>
+                <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">👤 인원 추가</h2>
+                <div class="flex gap-2 mb-4">
+                    <input type="text" id="playerName"
+                        class="flex-1 min-w-[60px] bg-[#0b0f19] border border-gray-700 rounded-lg px-2 py-2 text-sm text-white focus:border-neon-purple focus:outline-none"
+                        placeholder="닉네임">
+                    <select id="playerTier"
+                        class="w-18 bg-[#0b0f19] border border-gray-700 rounded-lg px-1 py-2 text-xs text-white focus:border-neon-purple focus:outline-none cursor-pointer">
+                        <option value="1">1티어</option>
+                        <option value="2">2티어</option>
+                        <option value="3" selected>3티어</option>
+                        <option value="4">4티어</option>
+                        <option value="5">5티어</option>
+                    </select>
+                    <select id="playerPosition"
+                        class="w-20 bg-[#0b0f19] border border-gray-700 rounded-lg px-1 py-2 text-xs text-white focus:border-neon-purple focus:outline-none cursor-pointer">
+                        <option value="ALL">상관없음</option>
+                        <option value="TOP">탑</option>
+                        <option value="JUG">정글</option>
+                        <option value="MID">미드</option>
+                        <option value="ADC">바텀</option>
+                        <option value="SUP">서폿</option>
+                    </select>
+                    <button onclick="addPlayer()"
+                        class="bg-neon-purple hover:bg-purple-600 text-white font-bold px-3 py-2 rounded-lg transition-all">
+                        +
+                    </button>
+                </div>
+
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-gray-400">등록된 인원 <span id="playerCount"
+                            class="text-neon-purple">0</span>명</span>
+                    <button onclick="clearPlayers()" class="text-[10px] text-gray-500 hover:text-red-400">전체 삭제</button>
+                </div>
+                <div id="playerList" class="flex-grow overflow-y-auto space-y-1.5 pr-1"></div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-3 flex flex-col gap-4">
+
+            <!-- 게임 테마 설정 -->
+            <div class="bg-dark-card rounded-xl border border-gray-800 p-4 shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
+                <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">🎮 게임 테마 (진영 랜덤)</h2>
+
+                <div class="flex flex-col gap-2">
+                    <label
+                        class="flex items-center gap-3 bg-[#0b0f19] p-3 rounded-lg border border-gray-700 cursor-pointer hover:border-neon-blue transition-colors">
+                        <input type="radio" name="gameTheme" value="lol" checked
+                            class="w-4 h-4 text-neon-blue bg-gray-900 border-gray-600 focus:ring-neon-blue">
+                        <span class="text-sm font-bold text-gray-200">리그 오브 레전드 <span
+                                class="text-xs font-normal text-gray-500">(블루/레드)</span></span>
+                    </label>
+                    <label
+                        class="flex items-center gap-3 bg-[#0b0f19] p-3 rounded-lg border border-gray-700 cursor-pointer hover:border-red-400 transition-colors">
+                        <input type="radio" name="gameTheme" value="valorant"
+                            class="w-4 h-4 text-red-500 bg-gray-900 border-gray-600 focus:ring-red-500">
+                        <span class="text-sm font-bold text-gray-200">발로란트 <span
+                                class="text-xs font-normal text-gray-500">(공격/수비)</span></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 팀 생성 설정 -->
+            <div
+                class="bg-dark-card rounded-xl border border-gray-800 p-4 shadow-lg relative overflow-hidden flex-grow">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-blue to-cyan-400"></div>
+                <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">⚙ 생성 설정</h2>
+
+                <div class="flex gap-3 mb-6">
+                    <div class="flex-1 bg-[#0b0f19] p-3 rounded-lg border border-gray-800">
+                        <label class="block text-[10px] text-gray-400 mb-1">생성할 팀 수</label>
+                        <input type="number" id="numTeams" min="1" value="2"
+                            class="w-full bg-transparent text-white font-bold text-lg text-center focus:outline-none">
+                    </div>
+                    <div class="flex items-center text-gray-600 font-bold">×</div>
+                    <div class="flex-1 bg-[#0b0f19] p-3 rounded-lg border border-gray-800">
+                        <label class="block text-[10px] text-gray-400 mb-1">팀당 인원 수</label>
+                        <input type="number" id="perTeam" min="1" value="5"
+                            class="w-full bg-transparent text-white font-bold text-lg text-center focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <button onclick="generateTeams('tier')"
+                        class="relative group overflow-hidden bg-gradient-to-r from-neon-purple to-neon-blue text-white font-bold py-3.5 rounded-lg shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+                        <span class="relative z-10 flex flex-col items-center">
+                            <span>⚖️ 티어 밸런스 모드 매칭</span>
+                            <span class="text-[10px] font-normal opacity-80 mt-1">각 팀의 실력을 최대한 동등하게 배분</span>
+                        </span>
+                        <div
+                            class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform">
+                        </div>
+                    </button>
+                    <button onclick="generateTeams('random')"
+                        class="bg-[#1e293b] hover:bg-gray-700 text-gray-300 border border-gray-600 font-bold py-3 rounded-lg transition-colors text-sm flex flex-col items-center">
+                        <span>🎲 완전 랜덤 모드</span>
+                        <span class="text-[10px] font-normal text-gray-500 mt-1">티어 상관없이 무작위 섞기</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STREAMING_CHUNK:Rendering matching results and drag-and-drop area -->
+        <div class="lg:col-span-6 flex flex-col gap-4">
+            <div
+                class="bg-dark-card rounded-xl border border-gray-800 p-4 shadow-lg flex-grow flex flex-col min-h-[600px] relative">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">🎮 팀 매칭 결과 <span
+                            class="text-xs font-normal text-gray-500 ml-2">(자유로운 드래그 앤 드롭 이동 가능)</span></h2>
+                    <button id="copyBtn" onclick="copyResults()"
+                        class="hidden bg-gray-800 hover:bg-gray-700 text-white text-xs py-1.5 px-3 rounded-md border border-gray-600 transition-colors">
+                        결과 복사하기
+                    </button>
+                </div>
+
+                <div class="flex-grow flex flex-col gap-4">
+                    <!-- 생성된 팀들 표시 영역 -->
+                    <div id="teamsOutput" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div
+                            class="col-span-full h-[200px] flex items-center justify-center border-2 border-dashed border-gray-700 rounded-xl text-gray-500 text-sm">
+                            좌측에서 설정을 완료하고 매칭 버튼을 눌러주세요.
+                        </div>
+                    </div>
+
+                    <!-- 대기자 / 옵저버 풀 -->
+                    <div class="mt-auto border-t border-gray-800 pt-4">
+                        <h3 class="text-sm font-bold text-gray-400 mb-2">대기자 / 관전 (Standby)</h3>
+                        <div id="standbyPool"
+                            class="min-h-[80px] bg-[#0b0f19] border border-gray-800 rounded-xl p-3 flex flex-wrap gap-2 transition-all"
+                            ondragover="allowDrop(event)" ondragleave="dragLeave(event)"
+                            ondrop="drop(event, 'standby')">
+                            <span class="text-xs text-gray-600 self-center w-full text-center">매칭 후 남는 인원이 여기에
+                                표시됩니다.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- STREAMING_CHUNK:Rendering history section -->
+    <section class="max-w-[1400px] mx-auto px-4 mt-6">
+        <div class="bg-dark-card rounded-xl border border-gray-800 p-4 shadow-lg">
+            <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">🕰️ 최근 생성 기록</h2>
+            <div id="historyList" class="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+                <div class="text-xs text-gray-500 italic">기록이 없습니다.</div>
+            </div>
+        </div>
+    </section>
+
+    <div id="toastContainer" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2"></div>
+
+    <!-- STREAMING_CHUNK:Adding Firebase and application script logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global State
+        let players = [];
+        let currentResult = null;
+        let historyData = [];
+
+        // Firebase Configuration & Initialization
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-guild-app';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+
+        let db = null;
+        let auth = null;
+        let isCloudSynced = false;
+        let isRemoteUpdate = false;
+
+        async function initCloudSync() {
+            try {
+                if (!firebaseConfig.apiKey) {
+                    document.getElementById('syncBadge').textContent = '💾 오프라인 모드';
+                    document.getElementById('syncBadge').className = 'text-[9px] bg-gray-800 text-gray-400 px-1.5 py-0.2 rounded border border-gray-700';
+                    return;
+                }
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                if (!auth.currentUser) return;
+
+                document.getElementById('syncBadge').textContent = '🟢 실시간 동기화 중';
+                document.getElementById('syncBadge').className = 'text-[9px] bg-green-500/20 text-green-400 px-1.5 py-0.2 rounded border border-green-500/30';
+                isCloudSynced = true;
+
+                // Setup Realtime Listener
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'guild_sync', 'main_room');
+                onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        isRemoteUpdate = true;
+                        if (data.players) players = data.players;
+                        if (data.currentResult !== undefined) currentResult = data.currentResult;
+                        if (data.historyData) historyData = data.historyData;
+                        updateUI();
+                        if (currentResult) renderResult();
+                        renderHistory();
+                        isRemoteUpdate = false;
+                    }
+                }, (error) => {
+                    console.error("Firestore sync error:", error);
+                });
+
+            } catch (e) {
+                console.error("Cloud init error:", e);
+                document.getElementById('syncBadge').textContent = '⚠️ 동기화 오류';
+                document.getElementById('syncBadge').className = 'text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.2 rounded border border-red-500/30';
+            }
+        }
+
+        async function saveToCloud() {
+            if (!isCloudSynced || !db || !auth.currentUser || isRemoteUpdate) return;
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'guild_sync', 'main_room');
+                await setDoc(docRef, {
+                    players,
+                    currentResult,
+                    historyData,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            } catch (e) {
+                console.error("Save to cloud error:", e);
+            }
+        }
+
+        const TIER_STYLES = {
+            1: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
+            2: { color: 'text-gray-300', bg: 'bg-gray-400/10', border: 'border-gray-400/30' },
+            3: { color: 'text-amber-600', bg: 'bg-amber-700/10', border: 'border-amber-700/30' },
+            4: { color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
+            5: { color: 'text-stone-400', bg: 'bg-stone-500/10', border: 'border-stone-500/30' }
+        };
+
+        const POS_ICONS = {
+            'ALL': '🎲', 'TOP': '⚔️️', 'JUG': '🌲', 'MID': '🔥', 'ADC': '🏹', 'SUP': '🛡️'
+        };
+
+        const POS_NAMES = {
+            'ALL': '올라운더', 'TOP': '탑', 'JUG': '정글', 'MID': '미드', 'ADC': '바텀', 'SUP': '서포터'
+        };
+
+        document.getElementById('playerName').addEventListener('keypress', e => { if (e.key === 'Enter') addPlayer(); });
+
+        window.showToast = function (msg, type = 'error') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bg = type === 'error' ? 'bg-red-500/90' : 'bg-neon-blue/90';
+            toast.className = `${bg} text-white px-4 py-2 rounded-full shadow-lg text-sm font-bold toast-enter backdrop-blur-md`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.replace('toast-enter', 'toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        window.shareLink = function () {
+            const ta = document.createElement('textarea');
+            ta.value = window.location.href;
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showToast('현재 페이지 링크가 복사되었습니다! 친구들에게 공유하세요.', 'success');
+            } catch (e) {
+                showToast('링크 복사에 실패했습니다.');
+            }
+            document.body.removeChild(ta);
+        }
+
+        window.addPlayer = function (nameStr = null, tierStr = null, posStr = null) {
+            const name = nameStr || document.getElementById('playerName').value.trim();
+            const tier = parseInt(tierStr || document.getElementById('playerTier').value);
+            const position = posStr || document.getElementById('playerPosition').value;
+
+            if (!name) return;
+            if (players.some(p => p.name === name)) {
+                if (!nameStr) showToast('이미 등록된 이름입니다.');
+                return;
+            }
+
+            players.push({ id: `p_${Date.now()}_${Math.floor(Math.random() * 1000)}`, name, tier, position });
+
+            if (!nameStr) {
+                document.getElementById('playerName').value = '';
+                document.getElementById('playerName').focus();
+            }
+            updateUI();
+            saveToCloud();
+        }
+
+        window.addBulkPlayers = function () {
+            const input = document.getElementById('bulkInput').value;
+            const selectedTier = document.getElementById('bulkTier').value;
+            const names = input.split(/[\n,]+/).map(n => n.trim().split(/\s+/)).flat().filter(n => n.length > 0);
+            if (names.length === 0) return showToast('입력된 이름이 없습니다.');
+
+            let added = 0;
+            names.forEach(name => {
+                if (!players.some(p => p.name === name)) {
+                    players.push({ id: `p_${Date.now()}_${Math.floor(Math.random() * 1000)}`, name, tier: parseInt(selectedTier), position: 'ALL' });
+                    added++;
+                }
+            });
+            document.getElementById('bulkInput').value = '';
+            updateUI();
+            saveToCloud();
+            showToast(`${added}명 일괄 등록 완료! (${selectedTier}티어)`, 'success');
+        }
+
+        window.removePlayer = function (id) {
+            players = players.filter(p => p.id !== id);
+            updateUI();
+            saveToCloud();
+        }
+
+        window.clearPlayers = function () {
+            players = [];
+            currentResult = null;
+            document.getElementById('teamsOutput').innerHTML = '<div class="col-span-full h-[200px] flex items-center justify-center border-2 border-dashed border-gray-700 rounded-xl text-gray-500 text-sm">초기화 되었습니다.</div>';
+            document.getElementById('standbyPool').innerHTML = '<span class="text-xs text-gray-600 self-center w-full text-center">대기 인원 없음</span>';
+            document.getElementById('copyBtn').classList.add('hidden');
+            updateUI();
+            saveToCloud();
+        }
+
+        function updateUI() {
+            document.getElementById('playerCount').textContent = players.length;
+            document.getElementById('playerList').innerHTML = players.map(p => {
+                const s = TIER_STYLES[p.tier];
+                const posIcon = POS_ICONS[p.position] || '🎲';
+                return `
+                <div class="flex justify-between items-center bg-[#111827] border ${s.border} p-2 rounded-lg group hover:border-gray-500 transition-colors">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] w-5 h-5 flex items-center justify-center rounded font-bold ${s.bg} ${s.color}">${p.tier}</span>
+                        <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded border border-gray-700" title="${POS_NAMES[p.position]}">${posIcon}</span>
+                        <span class="text-xs text-gray-200 font-bold">${p.name}</span>
+                    </div>
+                    <button onclick="removePlayer('${p.id}')" class="text-gray-600 hover:text-red-400 text-xs px-1">✕</button>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function shuffle(arr) {
+            const array = [...arr];
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function getFactionNames(numT, theme) {
+            const lolBases = [{ name: '블루팀', type: 'blue' }, { name: '레드팀', type: 'red' }];
+            const valBases = [{ name: '공격팀', type: 'red' }, { name: '수비팀', type: 'blue' }];
+
+            const bases = theme === 'lol' ? lolBases : valBases;
+            let result = [];
+
+            for (let i = 0; i < numT; i++) {
+                let b = bases[i % 2];
+                let suffix = numT > 2 ? ` ${Math.floor(i / 2) + 1}` : '';
+                result.push({ name: b.name + suffix, type: b.type });
+            }
+            return shuffle(result);
+        }
+
+        window.generateTeams = function (mode) {
+            const numT = parseInt(document.getElementById('numTeams').value);
+            const perT = parseInt(document.getElementById('perTeam').value);
+            const req = numT * perT;
+            const theme = document.querySelector('input[name="gameTheme"]:checked').value;
+
+            if (players.length < req) {
+                return showToast(`인원이 부족합니다. (필요: ${req}명, 현재: ${players.length}명)`);
+            }
+
+            let shuffledAll = shuffle(players);
+            let activePlayers = shuffledAll.slice(0, req);
+            let standbyPlayers = shuffledAll.slice(req);
+
+            let factions = getFactionNames(numT, theme);
+            let teams = Array.from({ length: numT }, (_, i) => ({
+                id: `team_${i}`,
+                name: factions[i].name,
+                type: factions[i].type,
+                players: []
+            }));
+
+            if (mode === 'tier') {
+                activePlayers.sort((a, b) => a.tier - b.tier);
+                activePlayers.forEach((p, index) => {
+                    teams[index % numT].players.push(p);
+                });
+            } else {
+                activePlayers.forEach((p, index) => {
+                    teams[index % numT].players.push(p);
+                });
+            }
+
+            teams.forEach(t => t.players.sort((a, b) => a.tier - b.tier));
+            standbyPlayers.sort((a, b) => a.tier - b.tier);
+
+            currentResult = { teams, standby: standbyPlayers };
+
+            saveHistory();
+            renderResult();
+            saveToCloud();
+            showToast('매칭 완료!', 'success');
+        }
+
+        window.dragStart = function (e, playerId, sourceId) {
+            e.dataTransfer.setData('playerId', playerId);
+            e.dataTransfer.setData('sourceId', sourceId);
+            e.target.classList.add('dragging');
+        }
+        window.dragEnd = function (e) {
+            e.target.classList.remove('dragging');
+        }
+        window.allowDrop = function (e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+        window.dragLeave = function (e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+        window.drop = function (e, targetId) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            const playerId = e.dataTransfer.getData('playerId');
+            const sourceId = e.dataTransfer.getData('sourceId');
+            if (sourceId === targetId) return;
+
+            let sArr, tArr;
+            if (sourceId === 'standby') sArr = currentResult.standby;
+            else sArr = currentResult.teams.find(t => t.id === sourceId).players;
+
+            if (targetId === 'standby') tArr = currentResult.standby;
+            else tArr = currentResult.teams.find(t => t.id === targetId).players;
+
+            const pIdx = sArr.findIndex(p => p.id === playerId);
+            if (pIdx > -1) {
+                const player = sArr.splice(pIdx, 1)[0];
+                tArr.push(player);
+
+                tArr.sort((a, b) => a.tier - b.tier);
+                if (sourceId !== 'standby') {
+                    const stTeam = currentResult.teams.find(t => t.id === sourceId);
+                    if (stTeam) stTeam.players.sort((a, b) => a.tier - b.tier);
+                }
+
+                renderResult();
+                saveToCloud();
+            }
+        }
+
+        function renderResult() {
+            if (!currentResult) return;
+            document.getElementById('copyBtn').classList.remove('hidden');
+
+            document.getElementById('teamsOutput').innerHTML = currentResult.teams.map((t) => {
+                const isRed = t.type === 'red';
+                const headerColor = isRed ? 'bg-red-900/30 border-red-800/50' : 'bg-blue-900/30 border-blue-800/50';
+                const titleColor = isRed ? 'text-red-400' : 'text-blue-400';
+                const icon = t.name.includes('레드') ? '🔴' : t.name.includes('블루') ? '🔵' : t.name.includes('공격') ? '⚔️' : '🛡';
+
+                return `
+                <div class="bg-[#111827] border border-gray-800 rounded-xl overflow-hidden flex flex-col min-h-[150px]" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, '${t.id}')">
+                    <div class="px-4 py-3 border-b ${headerColor} flex justify-between items-center">
+                        <h3 class="font-extrabold text-sm ${titleColor}">${icon} ${t.name}</h3>
+                        <span class="text-[10px] bg-gray-900 px-2 py-0.5 rounded text-gray-400 border border-gray-700">${t.players.length}명</span>
+                    </div>
+                    <div class="p-3 flex flex-col gap-2 flex-grow">
+                        ${t.players.map(p => {
+                    const s = TIER_STYLES[p.tier];
+                    const posIcon = POS_ICONS[p.position] || '🎲';
+                    return `
+                            <div draggable="true" ondragstart="dragStart(event, '${p.id}', '${t.id}')" ondragend="dragEnd(event)" class="cursor-move bg-[#0b0f19] border border-gray-700/50 p-2 rounded-lg flex items-center justify-between hover:border-gray-500 transition-colors shadow-sm fade-in">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded border border-gray-700" title="${POS_NAMES[p.position]}">${posIcon}</span>
+                                    <span class="text-xs font-bold text-gray-200">${p.name}</span>
+                                </div>
+                                <span class="text-[10px] w-5 h-5 flex items-center justify-center rounded font-bold ${s.bg} ${s.color}">${p.tier}</span>
+                            </div>`;
+                }).join('')}
+                        ${t.players.length === 0 ? '<div class="text-xs text-gray-600 m-auto py-4">비어있음</div>' : ''}
+                    </div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('standbyPool').innerHTML = currentResult.standby.map(p => {
+                const s = TIER_STYLES[p.tier];
+                const posIcon = POS_ICONS[p.position] || '🎲';
+                return `
+                <div draggable="true" ondragstart="dragStart(event, '${p.id}', 'standby')" ondragend="dragEnd(event)" class="cursor-move bg-[#111827] border border-gray-700 px-3 py-1.5 rounded-full flex items-center gap-2 hover:border-gray-400 transition-colors fade-in">
+                    <span class="text-[10px] opacity-70" title="${POS_NAMES[p.position]}">${posIcon}</span>
+                    <span class="text-xs font-bold text-gray-300">${p.name}</span>
+                    <span class="text-[10px] font-bold ${s.color}">T${p.tier}</span>
+                </div>`;
+            }).join('') + (currentResult.standby.length === 0 ? '<span class="text-xs text-gray-600 self-center w-full text-center">대기 인원 없음</span>' : '');
+        }
+
+        function saveHistory() {
+            if (!currentResult) return;
+            const time = new Date().toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            historyData.unshift({ time, result: JSON.parse(JSON.stringify(currentResult)) });
+            if (historyData.length > 5) historyData.pop();
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            if (!historyData || historyData.length === 0) {
+                list.innerHTML = '<div class="text-xs text-gray-500 italic">기록이 없습니다.</div>';
+                return;
+            }
+            list.innerHTML = historyData.map((h, i) => `
+                <div class="flex-shrink-0 bg-[#0b0f19] border border-gray-800 rounded-lg p-3 w-[260px] hover:border-neon-blue cursor-pointer transition-colors shadow-lg" onclick="loadHistory(${i})">
+                    <div class="text-[10px] text-neon-blue font-bold mb-2 border-b border-gray-800 pb-1">🕒 ${h.time} 생성</div>
+                    <div class="text-[11px] text-gray-400 flex flex-col gap-1.5">
+                        ${h.result.teams.map(t => `<span class="truncate"><span class="${t.type === 'red' ? 'text-red-400' : 'text-blue-400'} font-bold">${t.name}</span>:${t.players.map(p => p.name).join(', ')}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.loadHistory = function (index) {
+            currentResult = JSON.parse(JSON.stringify(historyData[index].result));
+            renderResult();
+            saveToCloud();
+            showToast('과거 기록을 불러왔습니다.', 'success');
+        }
+
+        window.copyResults = function () {
+            if (!currentResult) return;
+            let txt = "⚔️ 팀 매칭 결과 ⚔️\n\n";
+            currentResult.teams.forEach(t => {
+                txt += `[ ${t.name} ]\n`;
+                t.players.forEach(p => {
+                    const posName = POS_NAMES[p.position] || '올라운더';
+                    txt += `- ${p.name} (T${p.tier} / ${posName})\n`;
+                });
+                txt += "\n";
+            });
+            if (currentResult.standby.length > 0) {
+                txt += `[ 관전/대기실 ]\n${currentResult.standby.map(p => {
+                    const posName = POS_NAMES[p.position] || '올라운더';
+                    return `${p.name}(T${p.tier}/${posName})`;
+                }).join(', ')}`;
+            }
+
+            const ta = document.createElement('textarea');
+            ta.value = txt;
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showToast('복사 완료!', 'success');
+                } else {
+                    showToast('복사에 실패했습니다.');
+                }
+            } catch (err) {
+                showToast('복사를 지원하지 않는 환경입니다.');
+            }
+            document.body.removeChild(ta);
+        }
+
+        window.saveStateLocally = function () {
+            localStorage.setItem('cg_maker_pro_data', JSON.stringify({ players, currentResult, historyData }));
+            showToast('로컬 저장 완료!', 'success');
+        }
+
+        window.loadStateLocally = function () {
+            const data = JSON.parse(localStorage.getItem('cg_maker_pro_data') || 'null');
+            if (data) {
+                players = data.players || [];
+
+                currentResult = data.currentResult || null;
+                historyData = data.historyData || [];
+                updateUI();
+                if (currentResult) renderResult();
+                renderHistory();
+                saveToCloud();
+                showToast('불러오기 완료!', 'success');
+            } else {
+                showToast('저장된 데이터가 없습니다.');
+            }
+        }
+
+        // Initialize cloud sync on load
+        initCloudSync();
+        updateUI();
+    </script>
+</body>
+
+</html>
+```eof
